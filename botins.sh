@@ -7,7 +7,7 @@ REPO_URL="https://github.com/ianexec/whatsapp-bot-base.git"
 SERVICE_FILE="/etc/systemd/system/${BOT_NAME}.service"
 NODE_PATH="$(which node)"
 
-function installer() {
+function installer(){
     echo "===================================="
     echo "  🛠️  SETUP BOT WHATSAPP LUNATIC"
     echo "===================================="
@@ -65,7 +65,7 @@ EOF
     echo "===================================="
 }
 
-function uninstaller() {
+function uninstaller(){
     echo "===================================="
     echo "⚠️  UNINSTALL BOT WHATSAPP LUNATIC"
     echo "===================================="
