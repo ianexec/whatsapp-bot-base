@@ -1,15 +1,28 @@
 // index by lunatic Tunneling 
-// base asli daei awal bikin sendiri
 // support all nodejs version
 
 const { makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require("@whiskeysockets/baileys")
 const pino = require("pino")
 const chalk = require("chalk")
 const readline = require("readline")
+const fs = require("fs")
 
 const usePairingCode = true
-const cooldown = new Map() // ✅ Taruh di luar biar tetap nyimpen data antar pesan
+const cooldownPath = './cooldown.json'
 
+// Baca file cooldown kalau ada
+let cooldown = new Map()
+if (fs.existsSync(cooldownPath)) {
+    try {
+        const raw = fs.readFileSync(cooldownPath)
+        const parsed = JSON.parse(raw)
+        cooldown = new Map(parsed.map(j => [j, true]))
+    } catch (e) {
+        console.log("⚠️ Gagal baca cooldown.json")
+    }
+}
+
+// Fungsi input terminal
 async function question(prompt) {
     process.stdout.write(prompt)
     const r1 = readline.createInterface({
@@ -22,6 +35,7 @@ async function question(prompt) {
     }))
 }
 
+// Koneksi utama ke WhatsApp
 async function connectToWhatsApp() {
     const { state, saveCreds } = await useMultiFileAuthState('./lunaticSesi')
     const { version, isLatest } = await fetchLatestBaileysVersion()
@@ -39,6 +53,7 @@ async function connectToWhatsApp() {
         getMessage: async () => ({})
     })
 
+    // Pairing code (jika belum login)
     if (usePairingCode && !lunatic.authState.creds.registered) {
         try {
             const phoneNumber = await question('☘️ Masukan Nomor Yang Diawali Dengan 62 :\n')
@@ -70,17 +85,17 @@ async function connectToWhatsApp() {
         const isGroup = sender.endsWith('@g.us')
         const isFromMe = msg.key.fromMe
 
-        // ✅ Autoreply pribadi + cooldown 1 menit
-        if (!isGroup && !isFromMe) {
-            if (!cooldown.has(sender)) {
-                const autoReply = `Waalaikumsalam ada yg bisa saya bantu?\n\nTunggu admin beberapa detik untuk membalas pesan 😁\nAdmin sedikit sibuk soal nya😑`
-                await lunatic.sendMessage(sender, { text: autoReply }, { quoted: msg })
-                cooldown.set(sender, true)
-                setTimeout(() => cooldown.delete(sender), 60 * 1000)
-            }
+        // ✅ Autoreply pribadi + simpan cooldown
+        if (!isGroup && !isFromMe && !cooldown.has(sender)) {
+            const autoReply = `Waalaikumsalam ada yg bisa saya bantu?\n\nTunggu admin beberapa detik untuk membalas pesan 😁\nAdmin sedikit sibuk soal nya😑`
+            await lunatic.sendMessage(sender, { text: autoReply }, { quoted: msg })
+
+            cooldown.set(sender, true)
+            const list = Array.from(cooldown.keys())
+            fs.writeFileSync(cooldownPath, JSON.stringify(list, null, 2))
         }
 
-        // ✅ Jalankan command (kayak !menu)
+        // Jalankan command (misal !menu)
         require("./lunatic")(lunatic, m)
     })
 
